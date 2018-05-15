@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-@ Chebyshev error theory learns us that $$\Delta = \left(2^n(n+1)!\epsilon\right)^{1/(n+1)}.$$ Considering we use the cubic ejdiujefuf, $n=3$, which gives us $\Delta=(192\epsilon)^{(1/4)}$.
+@ Chebyshev error theory learns us that $$\Delta = \left(2^n(n+1)!\epsilon\right)^{1/(n+1)}.$$ Since we elect to use cubic interpollation ($n=3$) this simplefies to $$\Delta = \left(192\epsilon\right)^{(1/4)}.$$
 
 @d eps 1.0e-12
 
