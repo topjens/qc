@@ -14,17 +14,22 @@
 \item{} \quad\quad\quad ELSE
 \item{(9b)} $\displaystyle [0]^{(m)}$
 
+@d VERBOSITY_LEVEL 5
+
 @c
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <math.h>
 
 void vvprintf(int level, const char *s, ...)
 {
-	va_list args;
-	va_start(args, s);
-	vprintf(s, args);
-	va_end(args);
+	if(level <= VERBOSITY_LEVEL) {
+		va_list args;
+		va_start(args, s);
+		vprintf(s, args);
+		va_end(args);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -49,6 +54,7 @@ double Tcrit = -epslog;
 double change; /* to store the change between steps */
 register int i; /* to count the number of steps */
 
+vvprintf(5, "Delta = %.15f\n", Delta);
 vvprintf(5, "Calculating Tcrit\n");
 for(i = 0; i < 100; i++) {
 	change = (Tcrit + log(Tcrit) + epslog)/(1.0 + 1.0/Tcrit);
@@ -69,7 +75,24 @@ vvprintf(5, "%d -- %.15e [FINAL]\n", i + 1, Tcrit);
 
 @ @<Generate Cheb...@>=
 int table_size;
+double *X;
 double *e;
 double *g;
+
+table_size = (int)(Tcrit/2.0/Delta+0.5);
+
+vvprintf(5, "Table size = %d (from Delta to %dDelta)\n", table_size, 2*table_size-1);
+
+X = malloc(sizeof *X * table_size);
+
+@<Populate $X_i$@>@;
+
+free(X);
+
+@ Now we populate $X_i$, using $X_i = (2i+1)\Delta$.
+
+@<Populate $X_i$@>=
+for(i = 0; i < table_size; i++)
+	X[i] = (2*i+1)*Delta;
 
 @* Index.
