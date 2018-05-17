@@ -57,6 +57,8 @@ int main(int argc, char *argv[])
 
 @d eps 1.0e-12
 
+@f Delta TeX
+
 @<Prepare Chebyshev@>=
 double Delta = sqrt(sqrt(192*eps));
 double epslog = log(eps * 2.0);
@@ -90,7 +92,7 @@ vvprintf(5, "%d -- %.15e [FINAL]\n", i + 1, Tcrit);
 @ @<Generate Cheb...@>=
 int table_size;
 double *X;
-double *a[4];
+double a[4];
 double *e[4];
 double *g[4];
 
@@ -103,10 +105,6 @@ X = malloc(sizeof *X * table_size);
 @<Populate $X_i$@>@;
 @<Populate $e_k(i)$@>@;
 
-free(a[0]);
-free(a[1]);
-free(a[2]);
-free(a[3]);
 free(e[0]);
 free(e[1]);
 free(e[2]);
@@ -119,61 +117,36 @@ free(X);
 for(i = 0; i < table_size; i++)
 	X[i] = (2*i+1)*Delta;
 
-@ To make matters easier, we shall calculate $a$ separatly for each value of $k$. $$a_k = (2-\delta_{0k})$$
+@ To make matters easier, we shall calculate $a$ separatly for each value of $k$. $$a_k = (2-\delta_{0k}).$$ If we wait with adding $\exp{-X_i}$ until the end, we only need to calculate four $a$ values.
 
 @<Populate $e_k(i)$@>=
-int m; double sign;
-a[0] = calloc(table_size, sizeof *a[0]); /* we shall init all $a_k$ as 0.0 */
+int m; double temp; double fact = 1.0;
 
-for(i = 0; i < table_size; i++) {
-	for(m = 0, sign = 1.0; m < 20; m++, sign = -sign) {
-		change = pow(Delta/2.0,2*m)*exp(X[i])/(fact(m)*fact(m));
-		a[0][i] += sign*change;
-		if(change < 1e-6)
-			break;
-	}
+a[0] = 1.0; a[1] = 1.0; a[2] = 1.0/2.0; a[3] = 1.0/6.0;
+
+for(m = 1; m < 100; m++) {
+	fact = fact * Delta * Delta / 4.0 / m / m;
+	vvprintf(5, "*");
+	if(fact == 0.0)
+		break;
+	temp = fact;
+	a[0] += temp;
+	temp /= (m + 1.0);
+	a[1] += temp;
+	temp /= (m + 2.0);
+	a[2] += temp;
+	temp /= (m + 3.0);
+	a[3] += temp;
 }
 
-a[1] = calloc(table_size, sizeof *a[1]); /* we shall init all $a_k$ as 0.0 */
+temp = Delta;
+a[1] *= temp;
+temp *= Delta / 2.0;
+a[2] *= temp;
+temp *= Delta / 2.0;
+a[3] *= temp;
 
-for(i = 0; i < table_size; i++) {
-	for(m = 0, sign = 1.0; m < 20; m++, sign = -sign) {
-		change = pow(Delta/2.0,2*m)*exp(X[i])/(fact(m)*fact(1+m));
-		a[1][i] += sign*change;
-		if(change < 1e-6)
-			break;
-			printf("-");
-	}
-
-	printf("\n");
-	a[1][i] *= Delta;
-}
-
-a[2] = calloc(table_size, sizeof *a[2]); /* we shall init all $a_k$ as 0.0 */
-
-for(i = 0; i < table_size; i++) {
-	for(m = 0, sign = 1.0; m < 20; m++, sign = -sign) {
-		change = pow(Delta/2.0,2*m)*exp(X[i])/(fact(m)*fact(2+m));
-		a[2][i] += sign*change;
-		if(change < 1e-6)
-			break;
-	}
-
-	a[2][i] *= Delta*Delta/2.0;
-}
-
-a[3] = calloc(table_size, sizeof *a[3]); /* we shall init all $a_k$ as 0.0 */
-
-for(i = 0; i < table_size; i++) {
-	for(m = 0, sign = 1.0; m < 20; m++, sign = -sign) {
-		change = pow(Delta/2.0,2*m)*exp(X[i])/(fact(m)*fact(3+m));
-		a[3][i] += sign*change;
-		if(change < 1e-6)
-			break;
-	}
-
-	a[3][i] *= Delta*Delta*Delta/4.0;
-}
+vvprintf(5,"\na[0] = %20.15f\ta[1] = %20.15f\ta[2] = %f20.15\ta[3] = %f20.15\n", a[0], a[1], a[2], a[3]);
 
 @ Constructing the $e_k(i)$ from the $a_k(i)$ can be done in one loop.
 
@@ -184,10 +157,10 @@ e[2] = malloc(sizeof *e[2] * table_size);
 e[3] = malloc(sizeof *e[3] * table_size);
 
 for(i = 0; i < table_size; i++) {
-	e[0][i] = a[0][i]-a[2][i]+(a[1][i]-3.0*a[3][i])*(-X[i]/Delta)+2.0*a[2][i]*(-X[i]/Delta)*(-X[i]/Delta)+4.0*a[3][i]*(-X[i]/Delta)*(-X[i]/Delta)*(-X[i]/Delta);
-	e[1][i] = 2.0*a[1][i]-6.0*a[3][i]+8*a[2][i]*(-X[i]/Delta)+24*a[3][i]*(-X[i]/Delta)*(-X[i]/Delta);
-	e[2][i] = 8.0*a[2][i]+48.0*a[3][i]*(-X[i]/Delta);
-	e[3][i] = 32.0*a[3][i];
+	/*e[0][i] = a[0][i]-a[2][i]+(a[1][i]-3.0*a[3][i])*(-X[i]/Delta)+2.0*a[2][i]*(-X[i]/Delta)*(-X[i]/Delta)+4.0*a[3][i]*(-X[i]/Delta)*(-X[i]/Delta)*(-X[i]/Delta);*/
+	e[1][i] = (2.0*a[1]-6.0*a[3]+8*a[2]*(-X[i]/Delta)+24*a[3]*(-X[i]/Delta)*(-X[i]/Delta))*exp(-X[i]/Delta)/4.0*Delta;
+	e[2][i] = (8.0*a[2]+48.0*a[3]*(-X[i]/Delta))*exp(-X[i]/Delta)/16*Delta*Delta;
+	e[3][i] = 32.0*a[3]*exp(-X[i]/Delta)/64.0*Delta*Delta*Delta;
 }
 
 double test = 2.5;
