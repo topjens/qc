@@ -120,33 +120,43 @@ for(i = 0; i < table_size; i++)
 @ To make matters easier, we shall calculate $a$ separatly for each value of $k$. $$a_k = (2-\delta_{0k}).$$ If we wait with adding $\exp{-X_i}$ until the end, we only need to calculate four $a$ values.
 
 @<Populate $e_k(i)$@>=
-int m; double temp; double fact = 1.0;
+int m;
 
 a[0] = 1.0; a[1] = 1.0; a[2] = 1.0/2.0; a[3] = 1.0/6.0;
 
+double fact = 1.0;
+double term;
+
+double hafdel = -Delta / 2.0;
+double hafde2 = hafdel * hafdel;
+double r4Delt = 1.0/(4.0*Delta);
+
 for(m = 1; m < 100; m++) {
-	fact = fact * Delta * Delta / 4.0 / m / m;
 	vvprintf(5, "*");
-	if(fact == 0.0)
+	fact *= hafde2 / (m * m);
+	term = fact;
+	
+	if(a[0] == a[0] + term)
 		break;
-	temp = fact;
-	a[0] += temp;
-	temp /= (m + 1.0);
-	a[1] += temp;
-	temp /= (m + 2.0);
-	a[2] += temp;
-	temp /= (m + 3.0);
-	a[3] += temp;
+	a[0] += term;
+	term /= (m + 1.0);
+	a[1] += term;
+	term /= (m + 2.0);
+	a[2] += term;
+	term /= (m + 3.0);
+	a[3] += term;
 }
 
-temp = Delta;
-a[1] *= temp;
-temp *= Delta / 2.0;
-a[2] *= temp;
-temp *= Delta / 2.0;
-a[3] *= temp;
+vvprintf(5,"\na[0] = %20.15f\ta[1] = %20.15f\ta[2] = %20.15f\ta[3] = %20.15f\n", a[0], a[1], a[2], a[3]);
 
-vvprintf(5,"\na[0] = %20.15f\ta[1] = %20.15f\ta[2] = %f20.15\ta[3] = %f20.15\n", a[0], a[1], a[2], a[3]);
+fact = -Delta;
+a[1] *= fact;
+fact *= hafdel;
+a[2] *= fact;
+fact *= hafdel;
+a[3] *= fact;
+
+vvprintf(5,"\na[0] = %20.15f\ta[1] = %20.15f\ta[2] = %20.15f\ta[3] = %20.15f\n", a[0], a[1], a[2], a[3]);
 
 @ Constructing the $e_k(i)$ from the $a_k(i)$ can be done in one loop.
 
@@ -156,15 +166,34 @@ e[1] = malloc(sizeof *e[1] * table_size);
 e[2] = malloc(sizeof *e[2] * table_size);
 e[3] = malloc(sizeof *e[3] * table_size);
 
+double a00 = a[0] - a[2];
+double a01 = a[1] - 3.0*a[3];
+double a02 = 2.0*a[2];
+double a03 = 4.0*a[3];
+double a10 = (2.0*a[1]-6.0*a[3])*r4Delt;
+double a11 = (8.0*a[2])*r4Delt;
+double a12 = (24.0*a[3])*r4Delt;
+double a20 = (8.0*a[2])*r4Delt*r4Delt;
+double a21 = (48.0*a[3])*r4Delt*r4Delt;
+double a30 = (32.0*a[3])*r4Delt*r4Delt*r4Delt;
+
+vvprintf(5, "e[1][200] = %14.12f\n", e[1][200]);
+
 for(i = 0; i < table_size; i++) {
-	/*e[0][i] = a[0][i]-a[2][i]+(a[1][i]-3.0*a[3][i])*(-X[i]/Delta)+2.0*a[2][i]*(-X[i]/Delta)*(-X[i]/Delta)+4.0*a[3][i]*(-X[i]/Delta)*(-X[i]/Delta)*(-X[i]/Delta);*/
-	e[1][i] = (2.0*a[1]-6.0*a[3]+8*a[2]*(-X[i]/Delta)+24*a[3]*(-X[i]/Delta)*(-X[i]/Delta))*exp(-X[i]/Delta)/4.0*Delta;
-	e[2][i] = (8.0*a[2]+48.0*a[3]*(-X[i]/Delta))*exp(-X[i]/Delta)/16*Delta*Delta;
-	e[3][i] = 32.0*a[3]*exp(-X[i]/Delta)/64.0*Delta*Delta*Delta;
+	double X = -(i+i+1);
+	double TNeg = X * Delta;
+	double ExpT = exp(TNeg);
+	e[0][i] = ExpT*(a00+X*(a01+X*(a02+X*a03)));
+	e[1][i] = ExpT*(a10+X*(a11+X*a12));
+	e[2][i] = ExpT*(a20+X*a21);
+	e[3][i] = ExpT*a30;
+	//printf("e[3][%d] = %20.10f\n", i, e[3][i]);
 }
 
-double test = 2.5;
-int j = (int)(test/2.0/Delta);
-printf("exp(-%f)=%f\te(-%f)=%f\n", test, exp(-test), test, e[0][j]+test/2.0/Delta*(e[1][j]+test/2.0/Delta*(e[2][j]+test/2.0/Delta*e[3][j])));
+double test = 20;
+double t2 = 2.0*test;
+int j = t2*r4Delt;
+printf("j = %d\n", j);
+printf("exp(-%f)=%e\te(-%f)=%e\n", test, exp(-test), test, e[0][j]+t2*(e[1][j]+t2*(e[2][j]+t2*e[3][j])));
 
 @* Index.
